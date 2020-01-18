@@ -2,6 +2,7 @@ import pandas as pd
 import urllib3
 import json
 import datetime
+import os
 
 
 pd.set_option('display.max_rows', 100)
@@ -9,6 +10,8 @@ pd.set_option('display.max_columns', 500)
 pd.set_option('display.width', 1000)
 
 URL = r'https://www.predictit.org/api/marketdata/all/'
+USR_DIR = os.environ['USERPROFILE']
+DESKTOP = os.path.join(USR_DIR, 'Desktop')
 
 
 def fix_dates(x):
@@ -50,8 +53,8 @@ def get_contracts():
     contracts = pd.concat(contract_list)
     contracts = contracts.reset_index(drop=True)
     c_cols = ['market', 'shortName', 'bestBuyYesCost', 'bestBuyNoCost',
-              'lastTradePrice', 'lastClosePrice', 'marketId',
-              'updateTime', 'url']
+              'lastTradePrice', 'lastClosePrice', 'dateEnd', 'updateTime',
+              'marketId', 'url']
     contracts = contracts[c_cols]
     c_map = {'shortName': 'contract', 'bestBuyYesCost': 'yes',
              'bestBuyNoCost': 'no', 'lastTradePrice': 'last', 
@@ -62,3 +65,15 @@ def get_contracts():
         lambda x: datetime.datetime.strptime(x[:-3], '%Y-%m-%dT%H:%M:%S.%f'))
     return contracts
 
+
+def get_low_risk(threshold=.99, contracts=None, export=False):
+    if contracts is None:
+        contracts = get_contracts()
+    low_risk = contracts[(contracts['yes'] >= threshold) |
+                         (contracts['no'] >= threshold)]
+    low_risk = low_risk.sort_values('dateEnd')
+    low_risk = low_risk.reset_index(drop=True)
+    if export:
+        low_risk.to_excel(os.path.join(DESKTOP, 'low risk.xlsx'), index=False)
+    return low_risk
+    
