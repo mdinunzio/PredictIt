@@ -76,4 +76,17 @@ def get_low_risk(threshold=.99, contracts=None, export=False):
     if export:
         low_risk.to_excel(os.path.join(DESKTOP, 'low risk.xlsx'), index=False)
     return low_risk
-    
+
+
+def get_neg_risk(contracts=None, export=False):
+    if contracts is None:
+        contracts = get_contracts()
+    risk = contracts.copy()
+    risk_grp = risk.groupby('marketId')
+    risk['no payout'] = 1 - risk['no']
+    risk['risk'] = risk_grp['no payout'].transform('sum')
+    risk = risk.sort_values(['risk', 'marketId'], ascending=[False, True])
+    risk = risk.reset_index(drop=True)
+    if export:
+        risk.to_excel(os.path.join(DESKTOP, 'negative risk.xlsx'),
+                      index=False)
