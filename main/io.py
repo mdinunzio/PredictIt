@@ -90,3 +90,4 @@ def get_neg_risk(contracts=None, export=False):
     if export:
         risk.to_excel(os.path.join(DESKTOP, 'negative risk.xlsx'),
                       index=False)
+    return risk
