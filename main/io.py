@@ -3,6 +3,7 @@ import urllib3
 import json
 import datetime
 import os
+import auth
 
 
 pd.set_option('display.max_rows', 100)
