@@ -5,6 +5,8 @@ CREATE TABLE public.piContracts
     "market" character varying(75),
     "endDate" timestamp without time zone,
     "url" character varying(200),
+    "rules" text,
+    "baseline" integer,
     PRIMARY KEY ("marketId", "contractId", "updateTs")
 );
 
