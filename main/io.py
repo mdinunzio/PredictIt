@@ -10,7 +10,7 @@ pd.set_option('display.max_rows', 100)
 pd.set_option('display.max_columns', 500)
 pd.set_option('display.width', 1000)
 
-URL = r'https://www.predictit.org/api/marketdata/all/'
+PI_URL = r'https://www.predictit.org/api/marketdata/all/'
 USR_DIR = os.environ['USERPROFILE']
 DESKTOP = os.path.join(USR_DIR, 'Desktop')
 
@@ -28,18 +28,42 @@ def fix_dates(x):
         return datetime.datetime.strptime(x, fmt)
 
 
-def get_contracts():
+def get_pi_data():
     """
-    Return a DataFrame of formatted contract data.
+    Returns a JSON-style dictionary of PredictIt.org API data.
     """
     http = urllib3.PoolManager()
-    response = http.request('GET', URL)
+    response = http.request('GET', PI_URL)
 
     data_enc = response.data
     data_str = data_enc.decode('utf-8')
 
-    data = json.loads(data_str)
-    markets = data['markets']
+    pi_data = json.loads(data_str)
+    return pi_data
+
+
+def get_markets(pi_data=None):
+    """
+    Return a DataFrame of formatted market data.
+    """
+    if pi_data is None:
+        pi_data = get_pi_data()
+    market_data = pi_data['markets']
+    markets = pd.DataFrame(data=market_data)
+    col_map = {'id': 'marketId', 'shortName': 'market'}
+    markets = markets.rename(columns=col_map)
+    drop_cols = ['name', 'image', 'contracts']
+    markets = markets.drop(drop_cols, axis=1)
+    return markets
+
+
+def get_contracts(pi_data=None):
+    """
+    Return a DataFrame of formatted contract data.
+    """
+    if pi_data is None:
+        pi_data = get_pi_data()
+    markets = pi_data['markets']
 
     contract_list = []
 
