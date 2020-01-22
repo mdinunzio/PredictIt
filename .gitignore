@@ -1,3 +1,4 @@
 .project
 .pydevproject
 local
+*/__pycache__/*
