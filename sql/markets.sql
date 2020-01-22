@@ -1,4 +1,4 @@
-CREATE TABLE public.markets
+CREATE TABLE public.piMarkets
 (
     "marketId" integer NOT NULL,
     "updateTs" timestamp without time zone,
@@ -8,5 +8,5 @@ CREATE TABLE public.markets
     PRIMARY KEY ("marketId")
 );
 
-ALTER TABLE public.markets
+ALTER TABLE public.piMarkets
     OWNER to postgres;

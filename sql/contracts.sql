@@ -1,5 +1,5 @@
-CREATE TABLE public.contracts
-(	"marketId" REFERENCES markets(marketId),
+CREATE TABLE public.piContracts
+(	"marketId" REFERENCES piMarkets(marketId),
     "contractId" integer NOT NULL,
     "updateTs" timestamp without time zone,
     "market" character varying(75),
@@ -8,5 +8,5 @@ CREATE TABLE public.contracts
     PRIMARY KEY ("marketId", "contractId", "updateTs")
 );
 
-ALTER TABLE public.markets
+ALTER TABLE public.piContracts
     OWNER to postgres;
