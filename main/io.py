@@ -3,17 +3,34 @@ import urllib3
 import json
 import datetime
 import os
+import tweepy
 import authapi
 
 
+# SETUP ######################################################################
+
+# Pandas
 pd.set_option('display.max_rows', 100)
 pd.set_option('display.max_columns', 500)
 pd.set_option('display.width', 1000)
 
+# URLs and directories
 PI_URL = r'https://www.predictit.org/api/marketdata/all/'
 USR_DIR = os.environ['USERPROFILE']
 DESKTOP = os.path.join(USR_DIR, 'Desktop')
 
+# Twitter
+
+auth = tweepy.OAuthHandler(authapi.twitter['api_key'],
+                           authapi.twitter['api_secret_key'])
+
+auth.set_access_token(authapi.twitter['access_token'],
+                      authapi.twitter['access_token_secret'])
+twitter_api = tweepy.API(auth)
+
+twitter_api.get_user('realdonaldtrump').statuses_count
+
+# MAIN #######################################################################
 
 def fix_dates(x):
     """
@@ -42,7 +59,7 @@ def get_pi_data():
     return pi_data
 
 
-def get_markets(pi_data=None):
+def get_pi_markets(pi_data=None):
     """
     Return a DataFrame of formatted market data.
     """
@@ -57,7 +74,7 @@ def get_markets(pi_data=None):
     return markets
 
 
-def get_contracts(pi_data=None):
+def get_pi_contracts(pi_data=None):
     """
     Return a DataFrame of formatted contract data.
     """
