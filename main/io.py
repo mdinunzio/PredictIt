@@ -20,15 +20,12 @@ USR_DIR = os.environ['USERPROFILE']
 DESKTOP = os.path.join(USR_DIR, 'Desktop')
 
 # Twitter
-
 auth = tweepy.OAuthHandler(authapi.twitter['api_key'],
                            authapi.twitter['api_secret_key'])
-
 auth.set_access_token(authapi.twitter['access_token'],
                       authapi.twitter['access_token_secret'])
 twitter_api = tweepy.API(auth)
 
-twitter_api.get_user('realdonaldtrump').statuses_count
 
 # MAIN #######################################################################
 
@@ -110,7 +107,7 @@ def get_pi_contracts(pi_data=None):
 
 def get_low_risk(threshold=.99, contracts=None, export=False):
     if contracts is None:
-        contracts = get_contracts()
+        contracts = get_pi_contracts()
     low_risk = contracts[(contracts['yes'] >= threshold) |
                          (contracts['no'] >= threshold)]
     low_risk = low_risk.sort_values('dateEnd')
@@ -122,7 +119,7 @@ def get_low_risk(threshold=.99, contracts=None, export=False):
 
 def get_neg_risk(contracts=None, export=False):
     if contracts is None:
-        contracts = get_contracts()
+        contracts = get_pi_contracts()
     risk = contracts.copy()
     risk_grp = risk.groupby('marketId')
     risk['no payout'] = 1 - risk['no']
@@ -133,3 +130,34 @@ def get_neg_risk(contracts=None, export=False):
         risk.to_excel(os.path.join(DESKTOP, 'negative risk.xlsx'),
                       index=False)
     return risk
+
+
+def get_twitter_markets(pi_data=None):
+    markets = get_pi_markets(pi_data)
+    twitter_markets = markets[markets['market'].str.contains('tweets')]
+    return twitter_markets
+
+
+def get_twitter_users(pi_data=None):
+    twitter_markets = get_twitter_markets(pi_data)
+    twitter_users = twitter_markets['market'].map(
+        lambda x: x.split(' ')[0].replace('@', ''))
+    twitter_users = twitter_users.tolist()
+    return twitter_users
+    
+
+def get_tweet_counts(twitter_users=None):
+    if twitter_users is None:
+        twitter_users = get_twitter_users()
+    tweet_count_list = []
+    for user in twitter_users:
+        try:
+            api_user = twitter_api.get_user(user)
+            tweet_count = api_user.statuses_count
+            d = {'user': user,
+                 'tweets' : tweet_count}
+            tweet_count_list.append(d)
+        except Exception as e:
+            print(e)
+    tweet_counts = pd.DataFrame(tweet_count_list)
+    return tweet_counts
