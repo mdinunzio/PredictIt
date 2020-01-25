@@ -1,7 +1,8 @@
 import json
 import os
 import sys
-from collections import namedtuple
+from dataclasses import dataclass
+from sympy.printing import str
 
 
 # SETUP ######################################################################
@@ -18,11 +19,19 @@ pgdb = None
 # MAIN #######################################################################
 
 # Objects
-OauthCredentials = namedtuple('OauthCredentials',
-    ['api_key', 'api_secret_key', 'access_token', 'access_token_secret'])
 
-SqlCredentials = namedtuple('SqlCredentials',
-    ['username', 'password'])
+@dataclass
+class OauthCredentials:
+    api_key: str
+    api_secret_key: str
+    access_token: str
+    access_token_secret: str
+
+@dataclass
+class SqlCredentials:
+    db_name: str
+    username: str
+    password: str
 
 # Twitter
 def _setup_twitter():
