@@ -1,9 +1,9 @@
 CREATE TABLE public.TweetCounts
 (
+	"update_ts" timestamp without time zone,
     "user" character varying(25),
-    "update_ts" timestamp without time zone,
     "tweets" bigint,
-    PRIMARY KEY ("user", "update_ts")
+    PRIMARY KEY ("update_ts", "user")
 );
 
 ALTER TABLE public.TweetCounts

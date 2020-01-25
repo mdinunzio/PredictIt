@@ -5,6 +5,7 @@ import externapi
 import datetime
 import sqlalchemy
 import time
+from threading import Thread
 
 
 twitter_users = externapi.get_twitter_users()
@@ -34,3 +35,8 @@ def store_continuously():
         except Exception as e:
             print(e)
         time.sleep(60)
+
+
+def main():
+    t = Thread(target=store_continuously, daemon=True)
+    t.start()
