@@ -20,10 +20,10 @@ USR_DIR = os.environ['USERPROFILE']
 DESKTOP = os.path.join(USR_DIR, 'Desktop')
 
 # Twitter
-auth = tweepy.OAuthHandler(authapi.twitter['api_key'],
-                           authapi.twitter['api_secret_key'])
-auth.set_access_token(authapi.twitter['access_token'],
-                      authapi.twitter['access_token_secret'])
+auth = tweepy.OAuthHandler(authapi.twitter.api_key,
+                           authapi.twitter.api_secret_key)
+auth.set_access_token(authapi.twitter.access_token,
+                      authapi.twitter.access_token_secret)
 twitter_api = tweepy.API(auth)
 
 

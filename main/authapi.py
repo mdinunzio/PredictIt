@@ -20,6 +20,7 @@ pgdb = None
 # Objects
 OauthCredentials = namedtuple('OauthCredentials',
     ['api_key', 'api_secret_key', 'access_token', 'access_token_secret'])
+
 SqlCredentials = namedtuple('SqlCredentials',
     ['username', 'password'])
 
@@ -32,7 +33,7 @@ def _setup_twitter():
     twitter = OauthCredentials(**twitter_json)
 
 
-# Database
+# Postgresql Database
 def _setup_pgdb():
     global pgdb
     pgdb_fl = os.path.join(local_dir, 'pgdb.json')
