@@ -35,6 +35,9 @@ class SqlCredentials:
 
 # Twitter
 def _setup_twitter():
+    """
+    Set up the twitter OauthCredentials global variable.
+    """
     global twitter
     twitter_fl = os.path.join(local_dir, 'twitter.json')
     with open(twitter_fl, 'r') as f:
@@ -44,6 +47,9 @@ def _setup_twitter():
 
 # Postgresql Database
 def _setup_pgdb():
+    """
+    Set up the pgdb SqlCredentials global variable.
+    """
     global pgdb
     pgdb_fl = os.path.join(local_dir, 'pgdb.json')
     with open(pgdb_fl, 'r') as f:
