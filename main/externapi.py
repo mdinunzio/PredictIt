@@ -106,6 +106,9 @@ def get_pi_contracts(pi_data=None):
 
 
 def get_low_risk(threshold=.99, contracts=None, export=False):
+    """
+    Return a DataFrame of lower-risk contract opportunities.
+    """
     if contracts is None:
         contracts = get_pi_contracts()
     low_risk = contracts[(contracts['yes'] >= threshold) |
@@ -118,6 +121,9 @@ def get_low_risk(threshold=.99, contracts=None, export=False):
 
 
 def get_neg_risk(contracts=None, export=False):
+    """
+    Return a DataFrame with negative-risk calculations.
+    """
     if contracts is None:
         contracts = get_pi_contracts()
     risk = contracts.copy()
@@ -133,12 +139,18 @@ def get_neg_risk(contracts=None, export=False):
 
 
 def get_twitter_markets(pi_data=None):
+    """
+    Return a DataFrame of tweet markets.
+    """
     markets = get_pi_markets(pi_data)
     twitter_markets = markets[markets['market'].str.contains('tweets')]
     return twitter_markets
 
 
 def get_twitter_users(pi_data=None):
+    """
+    Return a list of Twitter users listed within the PredictIt data.
+    """
     twitter_markets = get_twitter_markets(pi_data)
     twitter_users = twitter_markets['market'].map(
         lambda x: x.split(' ')[0].replace('@', ''))
@@ -147,6 +159,9 @@ def get_twitter_users(pi_data=None):
     
 
 def get_tweet_counts(twitter_users=None):
+    """
+    Return a DataFrame of tweet counts for a given list of users.
+    """
     if twitter_users is None:
         twitter_users = get_twitter_users()
     tweet_count_list = []
