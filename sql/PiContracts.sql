@@ -1,7 +1,8 @@
 CREATE TABLE public.PiContracts
-(	"market_id" REFERENCES piMarkets(marketId),
+(	"market_id" REFERENCES PiMarkets(market_id),
     "contract_id" integer NOT NULL,
     "update_ts" timestamp without time zone,
+    "predictit_ts" timestamp without time zone,
     "market" character varying(75),
     "end_date" timestamp without time zone,
     "url" character varying(200),

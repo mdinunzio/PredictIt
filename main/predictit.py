@@ -19,15 +19,8 @@ PI_URL = r'https://www.predictit.org/api/marketdata/all/'
 USR_DIR = os.environ['USERPROFILE']
 DESKTOP = os.path.join(USR_DIR, 'Desktop')
 
-# Twitter
-auth = tweepy.OAuthHandler(authapi.twitter.api_key,
-                           authapi.twitter.api_secret_key)
-auth.set_access_token(authapi.twitter.access_token,
-                      authapi.twitter.access_token_secret)
-twitter_api = tweepy.API(auth)
 
-
-# MAIN #######################################################################
+# HELPER FUNCTIONS ###########################################################
 
 def fix_dates(x):
     """
@@ -41,6 +34,8 @@ def fix_dates(x):
     else:
         return datetime.datetime.strptime(x, fmt)
 
+
+# MAIN #######################################################################
 
 def get_pi_data():
     """
@@ -56,7 +51,27 @@ def get_pi_data():
     return pi_data
 
 
-def get_pi_markets(pi_data=None):
+def unpack_pi_data(pi_data=None):
+    """
+    Return a DataFrame of all PredictIt data.
+    """
+    if pi_data is None:
+        pi_data = get_pi_data()
+    markets = pi_data['markets']
+    pi_list = []
+
+    for mkt in markets:
+        m_df = pd.DataFrame(mkt).drop('contracts', axis=1)
+        c_df = pd.DataFrame(mkt['contracts'])
+        mc_df = pd.merge(m_df, c_df, left_index=True, right_index=True,
+                         suffixes=('Market', 'Contract'))
+        pi_list.append(mc_df)
+    pi_df = pd.concat(pi_list)
+    return pi_df
+    
+
+
+def get_markets(pi_data=None):
     """
     Return a DataFrame of formatted market data.
     """
@@ -71,7 +86,7 @@ def get_pi_markets(pi_data=None):
     return markets
 
 
-def get_pi_contracts(pi_data=None):
+def get_contracts(pi_data=None):
     """
     Return a DataFrame of formatted contract data.
     """
@@ -105,12 +120,32 @@ def get_pi_contracts(pi_data=None):
     return contracts
 
 
+def get_twitter_markets(pi_data=None):
+    """
+    Return a DataFrame of tweet markets.
+    """
+    markets = get_markets(pi_data)
+    twitter_markets = markets[markets['market'].str.contains('tweets')]
+    return twitter_markets
+
+
+def get_twitter_users(pi_data=None):
+    """
+    Return a list of Twitter users listed within the PredictIt data.
+    """
+    twitter_markets = get_twitter_markets(pi_data)
+    twitter_users = twitter_markets['market'].map(
+        lambda x: x.split(' ')[0].replace('@', ''))
+    twitter_users = twitter_users.tolist()
+    return twitter_users
+
+
 def get_low_risk(threshold=.99, contracts=None, export=False):
     """
     Return a DataFrame of lower-risk contract opportunities.
     """
     if contracts is None:
-        contracts = get_pi_contracts()
+        contracts = get_contracts()
     low_risk = contracts[(contracts['yes'] >= threshold) |
                          (contracts['no'] >= threshold)]
     low_risk = low_risk.sort_values('dateEnd')
@@ -125,7 +160,7 @@ def get_neg_risk(contracts=None, export=False):
     Return a DataFrame with negative-risk calculations.
     """
     if contracts is None:
-        contracts = get_pi_contracts()
+        contracts = get_contracts()
     risk = contracts.copy()
     risk_grp = risk.groupby('marketId')
     risk['no payout'] = 1 - risk['no']
@@ -136,43 +171,3 @@ def get_neg_risk(contracts=None, export=False):
         risk.to_excel(os.path.join(DESKTOP, 'negative risk.xlsx'),
                       index=False)
     return risk
-
-
-def get_twitter_markets(pi_data=None):
-    """
-    Return a DataFrame of tweet markets.
-    """
-    markets = get_pi_markets(pi_data)
-    twitter_markets = markets[markets['market'].str.contains('tweets')]
-    return twitter_markets
-
-
-def get_twitter_users(pi_data=None):
-    """
-    Return a list of Twitter users listed within the PredictIt data.
-    """
-    twitter_markets = get_twitter_markets(pi_data)
-    twitter_users = twitter_markets['market'].map(
-        lambda x: x.split(' ')[0].replace('@', ''))
-    twitter_users = twitter_users.tolist()
-    return twitter_users
-    
-
-def get_tweet_counts(twitter_users=None):
-    """
-    Return a DataFrame of tweet counts for a given list of users.
-    """
-    if twitter_users is None:
-        twitter_users = get_twitter_users()
-    tweet_count_list = []
-    for user in twitter_users:
-        try:
-            api_user = twitter_api.get_user(user)
-            tweet_count = api_user.statuses_count
-            d = {'user': user,
-                 'tweets' : tweet_count}
-            tweet_count_list.append(d)
-        except Exception as e:
-            print(e)
-    tweet_counts = pd.DataFrame(tweet_count_list)
-    return tweet_counts
