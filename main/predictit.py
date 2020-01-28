@@ -136,7 +136,7 @@ def get_twitter_users(pi_data=None):
     twitter_markets = get_twitter_markets(pi_data)
     twitter_users = twitter_markets['market'].map(
         lambda x: x.split(' ')[0].replace('@', ''))
-    twitter_users = twitter_users.tolist()
+    twitter_users = twitter_users.unique().tolist()
     return twitter_users
 
 

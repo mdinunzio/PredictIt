@@ -1,14 +1,14 @@
-from collections import namedtuple
 import pandas as pd
+import predictit
+import twitter
 import authapi
-import externapi
 import datetime
 import sqlalchemy
 import time
 from threading import Thread
 
 
-twitter_users = externapi.get_twitter_users()
+twitter_users = predictit.get_twitter_users()
 
 
 def store_tweet_counts(tweet_counts, update_ts=None):
@@ -31,7 +31,7 @@ def store_continuously():
         try:
             print(datetime.datetime.now())
             print('\tStoring')
-            tweet_counts = externapi.get_tweet_counts(twitter_users)
+            tweet_counts = twitter.get_tweet_counts(twitter_users)
             store_tweet_counts(tweet_counts)
             print('\tSuccess')
         except Exception as e:
