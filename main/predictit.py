@@ -155,6 +155,7 @@ def get_market_meta(market_id):
 
     mkt_data = json.loads(data_str)
     mkt_df = pd.Series(mkt_data)
+    return mkt_df
 
 
 def get_low_risk(threshold=.99, contracts=None, export=False):
