@@ -6,6 +6,7 @@ import os
 import tweepy
 import authapi
 import re
+import sqlalchemy
 
 
 # SETUP ######################################################################
@@ -89,8 +90,29 @@ def get_pi_df(pi_data=None, refine=True):
         col_map = {'time_stamp': 'predictit_ts'}
         pi_df = pi_df.rename(columns=col_map)
         pi_df['predictit_ts'] = pi_df['predictit_ts'].map(to_timetype)
-        pi_df['end_date'] = pi_df['date_end'].map(to_timetype)
+        pi_df['date_end'] = pi_df['date_end'].map(to_timetype)
     return pi_df
+
+
+def store_pi_df(pi_df=None, update_ts=None):
+    """
+    Store the PredictIt API data in the PiApi table.
+    """
+    if pi_df is None:
+        pi_df = get_pi_df()
+    if update_ts is None:
+        update_ts = datetime.datetime.now()
+    ul_df = pi_df.copy()
+    ul_df['update_ts'] = update_ts
+    engine = sqlalchemy.create_engine(
+        'postgresql+psycopg2://{username:s}:{password:s}'
+        '@{host:s}:{port:.0f}/{database:s}'
+        .format(username=authapi.pgdb.username,
+                password=authapi.pgdb.password,
+                host='localhost',
+                port=5432,
+                database=authapi.pgdb.db_name))
+    ul_df.to_sql('piapi', engine, if_exists='append',index=False)
     
 
 

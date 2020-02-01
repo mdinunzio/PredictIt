@@ -6,6 +6,7 @@ import os
 import tweepy
 import authapi
 import predictit
+import sqlalchemy
 
 
 # SETUP ######################################################################
@@ -47,3 +48,24 @@ def get_tweet_counts(twitter_users=None):
             print(e)
     tweet_counts = pd.DataFrame(tweet_count_list)
     return tweet_counts
+
+
+def store_tweet_counts(tweet_counts=None, update_ts=None):
+    """
+    Store tweet counts in the tweetcounts table.
+    """
+    if tweet_counts is None:
+        tweet_counts = get_tweet_counts()
+    if update_ts is None:
+        update_ts = datetime.datetime.now()
+    ul_df = tweet_counts.copy()
+    ul_df['update_ts'] = update_ts
+    engine = sqlalchemy.create_engine(
+        'postgresql+psycopg2://{username:s}:{password:s}'
+        '@{host:s}:{port:.0f}/{database:s}'
+        .format(username=authapi.pgdb.username,
+                password=authapi.pgdb.password,
+                host='localhost',
+                port=5432,
+                database=authapi.pgdb.db_name))
+    ul_df.to_sql('tweetcounts', engine, if_exists='append',index=False)
