@@ -5,6 +5,7 @@ import datetime
 import os
 import tweepy
 import authapi
+import re
 
 
 # SETUP ######################################################################
@@ -14,26 +15,38 @@ pd.set_option('display.max_rows', 100)
 pd.set_option('display.max_columns', 500)
 pd.set_option('display.width', 1000)
 
-# URLs and directories
-PI_URL = r'https://www.predictit.org/api/marketdata/all/'
-PI_MKT_URL = r'https://www.predictit.org/api/Market'
+# Directories
 USR_DIR = os.environ['USERPROFILE']
 DESKTOP = os.path.join(USR_DIR, 'Desktop')
+
+# Regex
+_camel_pattern = re.compile(r'(?<!^)(?=[A-Z])')
 
 
 # HELPER FUNCTIONS ###########################################################
 
-def fix_dates(x):
+def to_timetype(x, datetime_=False):
     """
     Return the appropriate datetime object for dateEnd column information.
     """
-    fmt = r'%Y-%m-%dT%H:%M:%S'
     if x == 'N/A' or x == 'NA':
         return pd.NaT
     elif pd.isnull(x):
         return x
     else:
-        return datetime.datetime.strptime(x, fmt)
+        ts = pd.Timestamp(x)
+    if not datetime_:
+        return ts
+    else:
+        return ts.to_pydatetime()
+
+
+def to_snake(x):
+    """
+    Return a string in snake case.
+    """
+    return _camel_pattern.sub('_', x).lower()
+    
 
 
 # MAIN #######################################################################
@@ -42,8 +55,9 @@ def get_pi_data():
     """
     Returns a JSON-style dictionary of PredictIt.org API data.
     """
+    api_url = r'https://www.predictit.org/api/marketdata/all/'
     http = urllib3.PoolManager()
-    response = http.request('GET', PI_URL)
+    response = http.request('GET', api_url)
 
     data_enc = response.data
     data_str = data_enc.decode('utf-8')
@@ -52,7 +66,7 @@ def get_pi_data():
     return pi_data
 
 
-def unpack_pi_data(pi_data=None):
+def get_pi_df(pi_data=None, refine=True):
     """
     Return a DataFrame of all PredictIt data.
     """
@@ -68,6 +82,14 @@ def unpack_pi_data(pi_data=None):
                          suffixes=('Market', 'Contract'))
         pi_list.append(mc_df)
     pi_df = pd.concat(pi_list)
+    pi_df = pi_df.reset_index(drop=True)
+    if refine:
+        pi_df.columns = [to_snake(x) for x
+                         in pi_df.columns]
+        col_map = {'time_stamp': 'predictit_ts'}
+        pi_df = pi_df.rename(columns=col_map)
+        pi_df['predictit_ts'] = pi_df['predictit_ts'].map(to_timetype)
+        pi_df['end_date'] = pi_df['date_end'].map(to_timetype)
     return pi_df
     
 
@@ -115,7 +137,7 @@ def get_contracts(pi_data=None):
              'bestBuyNoCost': 'no', 'lastTradePrice': 'last', 
              'lastClosePrice': 'close'}
     contracts = contracts.rename(columns=c_map)
-    contracts['dateEnd'] = contracts['dateEnd'].map(fix_dates)
+    contracts['dateEnd'] = contracts['dateEnd'].map(to_timetype)
     contracts['updateTime'] = contracts['updateTime'].map(
         lambda x: datetime.datetime.strptime(x[:-3], '%Y-%m-%dT%H:%M:%S.%f'))
     return contracts
@@ -147,7 +169,8 @@ def get_market_meta(market_id):
     and other specifics.
     """
     http = urllib3.PoolManager()
-    mkt_url = PI_MKT_URL + '{:.0f}'.format(market_id)
+    mkt_url = r'https://www.predictit.org/api/Market'
+    mkt_url = mkt_url + '{:.0f}'.format(market_id)
     response = http.request('GET', mkt_url)
 
     data_enc = response.data
@@ -174,8 +197,9 @@ def get_order_book(contract_id):
                'Sec-Fetch-Mode': 'cors',
                'Sec-Fetch-Site': 'same-origin',
                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36'}
-    trade_link = 'https://www.predictit.org/api/Trade/{:.0f}/OrderBook'.format(contract_id)
-    response = http.request('GET', trade_link, headers=headers)
+    ob_url = 'https://www.predictit.org/api/Trade/{:.0f}/OrderBook'
+    ob_url = ob_url.format(contract_id)
+    response = http.request('GET', ob_url, headers=headers)
     data_enc = response.data
     data_str = data_enc.decode('utf-8')
     ob_data = json.loads(data_str)
