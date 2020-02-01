@@ -16,6 +16,7 @@ pd.set_option('display.width', 1000)
 
 # URLs and directories
 PI_URL = r'https://www.predictit.org/api/marketdata/all/'
+PI_MKT_URL = r'https://www.predictit.org/api/Market'
 USR_DIR = os.environ['USERPROFILE']
 DESKTOP = os.path.join(USR_DIR, 'Desktop')
 
@@ -138,6 +139,22 @@ def get_twitter_users(pi_data=None):
         lambda x: x.split(' ')[0].replace('@', ''))
     twitter_users = twitter_users.unique().tolist()
     return twitter_users
+
+
+def get_market_meta(market_id):
+    """
+    Return a DataFrame of parsed market infomration including rules
+    and other specifics.
+    """
+    http = urllib3.PoolManager()
+    mkt_url = os.path.join(PI_MKT_URL, '{:.0f}'.format(market_id))
+    response = http.request('GET', mkt_url)
+
+    data_enc = response.data
+    data_str = data_enc.decode('utf-8')
+
+    mkt_data = json.loads(data_str)
+    mkt_df = pd.Series(mkt_data)
 
 
 def get_low_risk(threshold=.99, contracts=None, export=False):
