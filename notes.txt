@@ -1,0 +1,3 @@
+Prevent Auto Reboot
+https://www.laptopmag.com/articles/stop-windows-automatic-reboots
+Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU
