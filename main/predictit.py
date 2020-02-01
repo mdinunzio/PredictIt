@@ -158,6 +158,35 @@ def get_market_meta(market_id):
     return mkt_df
 
 
+def get_order_book(contract_id):
+    """
+    Return the order book for a given contract.
+    """
+    http = urllib3.PoolManager()
+    headers = {'Accept': 'application/json, text/plain, */*',
+               'Accept-Encoding': 'gzip, deflate, br',
+               'Accept-Language': 'en-US,en;q=0.9,it;q=0.8',
+               'Authorization': 'AUTH HERE',
+               'Connection': 'keep-alive',
+               'Cookie': 'COOKIE HERE',
+               'Host': 'www.predictit.org',
+               'Referer': 'https://www.predictit.org/markets/detail/6371/How-many-tweets-will-@mike_pence-post-from-noon-Jan-31-to-Feb-7',
+               'Sec-Fetch-Mode': 'cors',
+               'Sec-Fetch-Site': 'same-origin',
+               'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36'}
+    response = http.request('GET', 'https://www.predictit.org/api/Trade/20757/OrderBook', headers=headers)
+    data_enc = response.data
+    data_str = data_enc.decode('utf-8')
+    ob_data = json.loads(data_str)
+    yes_ob_data = ob_data['yesOrders']
+    no_ob_data = ob_data['noOrders']
+    yes_ob_df = pd.DataFrame(yes_ob_data)
+    no_ob_df = pd.DataFrame(no_ob_data)
+    ob_df = pd.concat([yes_ob_df, no_ob_df])
+    ob_df = ob_df.reset_index(drop=True)
+    return ob_df
+
+
 def get_low_risk(threshold=.99, contracts=None, export=False):
     """
     Return a DataFrame of lower-risk contract opportunities.
