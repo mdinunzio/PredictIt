@@ -147,20 +147,20 @@ def get_market_meta(market_id):
     and other specifics.
     """
     http = urllib3.PoolManager()
-    mkt_url = os.path.join(PI_MKT_URL, '{:.0f}'.format(market_id))
+    mkt_url = PI_MKT_URL + '{:.0f}'.format(market_id)
     response = http.request('GET', mkt_url)
 
     data_enc = response.data
     data_str = data_enc.decode('utf-8')
 
     mkt_data = json.loads(data_str)
-    mkt_df = pd.Series(mkt_data)
-    return mkt_df
+    mkt_s = pd.Series(mkt_data)
+    return mkt_s
 
 
 def get_order_book(contract_id):
     """
-    Return the order book for a given contract.
+    Return a Dataframe containing the order book for a given contract.
     """
     http = urllib3.PoolManager()
     headers = {'Accept': 'application/json, text/plain, */*',
@@ -170,11 +170,12 @@ def get_order_book(contract_id):
                'Connection': 'keep-alive',
                'Cookie': authapi.pixhr.cookie,
                'Host': 'www.predictit.org',
-               'Referer': 'https://www.predictit.org/markets/detail/6371/How-many-tweets-will-@mike_pence-post-from-noon-Jan-31-to-Feb-7',
+               'Referer': 'https://www.predictit.org',
                'Sec-Fetch-Mode': 'cors',
                'Sec-Fetch-Site': 'same-origin',
                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36'}
-    response = http.request('GET', 'https://www.predictit.org/api/Trade/20757/OrderBook', headers=headers)
+    trade_link = 'https://www.predictit.org/api/Trade/{:.0f}/OrderBook'.format(contract_id)
+    response = http.request('GET', trade_link, headers=headers)
     data_enc = response.data
     data_str = data_enc.decode('utf-8')
     ob_data = json.loads(data_str)
