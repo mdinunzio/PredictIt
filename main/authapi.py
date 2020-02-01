@@ -2,7 +2,6 @@ import json
 import os
 import sys
 from dataclasses import dataclass
-from sympy.printing import str
 
 
 # SETUP ######################################################################
@@ -15,6 +14,7 @@ local_dir = os.path.abspath(os.path.join(main_dir, '..', 'local'))
 # Globals
 twitter = None
 pgdb = None
+pixhr = None
 
 # MAIN #######################################################################
 
@@ -32,6 +32,11 @@ class SqlCredentials:
     db_name: str
     username: str
     password: str
+
+@dataclass
+class XhrCredentials:
+    authorization: str
+    cookie: str
 
 # Twitter
 def _setup_twitter():
@@ -57,6 +62,19 @@ def _setup_pgdb():
     pgdb = SqlCredentials(**pgdb_json)
 
 
+# PredictIt Cookies and header authorization
+def _setup_pixhr():
+    """
+    Set up the pixhr.
+    """
+    global pixhr
+    pixhr_fl = os.path.join(local_dir, 'pixhr.json')
+    with open(pixhr_fl, 'r') as f:
+        pixhr_json = json.load(f)
+    pixhr = XhrCredentials(**pixhr_json)
+
+
 _setup_twitter()
 _setup_pgdb()
+_setup_pixhr()
 
