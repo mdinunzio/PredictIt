@@ -1,3 +1,9 @@
 Prevent Auto Reboot
 https://www.laptopmag.com/articles/stop-windows-automatic-reboots
 Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU
+
+https://help.bluemangolearning.com/m/screensteps-workgroup/l/18259-Configuring-PostgreSQL-to-Accept-Connections-From-Computers-on-Your-Network
+
+https://stackoverflow.com/questions/22080307/access-postgresql-server-from-lan
+https://courses.cs.washington.edu/courses/csep544/11au/resources/postgresql-instructions.html
+https://www.postgresql.org/message-id/4B79CCFE.5040105@hogranch.com
