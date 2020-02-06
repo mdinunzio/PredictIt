@@ -7,3 +7,4 @@ https://help.bluemangolearning.com/m/screensteps-workgroup/l/18259-Configuring-P
 https://stackoverflow.com/questions/22080307/access-postgresql-server-from-lan
 https://courses.cs.washington.edu/courses/csep544/11au/resources/postgresql-instructions.html
 https://www.postgresql.org/message-id/4B79CCFE.5040105@hogranch.com
+https://dba.stackexchange.com/questions/100564/cant-connect-to-remote-postgresql-database
