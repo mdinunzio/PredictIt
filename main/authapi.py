@@ -2,6 +2,8 @@ import json
 import os
 import sys
 from dataclasses import dataclass
+from sympy.printing import str
+from sqlalchemy.engine import strategies
 
 
 # SETUP ######################################################################
@@ -32,6 +34,13 @@ class SqlCredentials:
     db_name: str
     username: str
     password: str
+
+@dataclass
+class PiCredentials:
+    email: str
+    password: str
+    grant_type: str = 'passowrd'
+    rememberMe: str = 'true'
 
 @dataclass
 class XhrCredentials:
