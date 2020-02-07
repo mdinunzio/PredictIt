@@ -17,6 +17,7 @@ local_dir = os.path.abspath(os.path.join(main_dir, '..', 'local'))
 twitter = None
 pgdb = None
 pixhr = None
+predictit = None
 
 # MAIN #######################################################################
 
@@ -36,11 +37,9 @@ class SqlCredentials:
     password: str
 
 @dataclass
-class PiCredentials:
+class PredictItCredentials:
     email: str
-    password: str
-    grant_type: str = 'passowrd'
-    rememberMe: str = 'true'
+    password: str = None
 
 @dataclass
 class XhrCredentials:
@@ -74,7 +73,7 @@ def _setup_pgdb():
 # PredictIt Cookies and header authorization
 def _setup_pixhr():
     """
-    Set up the pixhr.
+    Set up the XhrCredentials global variable.
     """
     global pixhr
     pixhr_fl = os.path.join(local_dir, 'pixhr.json')
@@ -83,7 +82,20 @@ def _setup_pixhr():
     pixhr = XhrCredentials(**pixhr_json)
 
 
+# PredictIt Cookies and header authorization
+def _setup_predictit():
+    """
+    Set up the PredictItCredentials global variable.
+    """
+    global predictit
+    predictit_fl = os.path.join(local_dir, 'predictit.json')
+    with open(predictit_fl, 'r') as f:
+        predictit_json = json.load(f)
+    predictit = PredictItCredentials(**predictit_json)
+
+
 _setup_twitter()
 _setup_pgdb()
 _setup_pixhr()
+_setup_predictit()
 

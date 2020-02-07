@@ -7,6 +7,8 @@ import tweepy
 import authapi
 import re
 import sqlalchemy
+import getpass
+import requests
 
 
 # SETUP ######################################################################
@@ -47,7 +49,70 @@ def to_snake(x):
     Return a string in snake case.
     """
     return _camel_pattern.sub('_', x).lower()
-    
+
+
+# MODELS ####################################################################
+
+class PiEngine():
+    """
+    An engine for interacting with PredictIt's non-API functionality and data.
+    """
+    def __init__(self):
+        self.email = authapi.predictit.email
+        self.password = authapi.predictit.password
+        if self.password == '':
+            self.password = getpass.getpass('Enter PI Password:')
+        self.authenticate_session()
+
+    def authenticate_session(self):
+        self.session = requests.Session()
+        self.session.headers = {
+            'Accept': 'application/json, text/plain, */*',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Accept-Language': 'en-US,en;q=0.9,it;q=0.8',
+            'Connection': 'keep-alive',
+            'Host': 'www.predictit.org',
+            'Referer': 'https://www.predictit.org',
+            'Sec-Fetch-Mode': 'cors',
+            'Sec-Fetch-Site': 'same-origin',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ' \
+                          'AppleWebKit/537.36 (KHTML, like Gecko) ' \
+                          'Chrome/79.0.3945.130 Safari/537.36'}
+        response = self.session.post(
+            r'https://www.predictit.org/api/Account/token',
+            data={'email': self.email, 'password': self.password,
+                  'grant_type': 'password', 'rememberMe': 'true'})
+        token = response.json()['access_token']
+        self.session.headers['Authorization'] = 'Bearer ' + token
+        print('Authenticated')
+        
+    def get_contract_market(self, contract_id):
+        rsrc_url = f'https://www.predictit.org/api/Trade/{contract_id:.0f}/OrderBook'
+        mkt = self.session.get(rsrc_url).json()
+        yes_mkt = mkt['yesOrders']
+        no_mkt = mkt['noOrders']
+        yes_mkt_df = pd.DataFrame(yes_mkt)
+        no_mkt_df = pd.DataFrame(no_mkt)
+        mkt_df = pd.concat([yes_mkt_df, no_mkt_df])
+        mkt_df = mkt_df.reset_index(drop=True)
+        mkt_df = mkt_df.rename(columns=lambda x: to_snake(x))
+        return mkt_df
+
+    def get_positions(self):
+        rsrc_url = r'https://www.predictit.org/api/Profile/Shares'
+        psns = self.session.get(rsrc_url).json()
+        return psns
+
+    def place_order(self, contract_id, trade_type, quantity, price):
+        rsrc_url = r'https://www.predictit.org/api/Trade/SubmitTrade'
+        data = {'quantity': quantity,
+                'pricePerShare': price,
+                'contractId': contract_id,
+                'tradeType': 0}
+        response = self.session.post(rsrc_url, data=data)
+        if response:
+            print('Order placed')
+        
 
 
 # MAIN #######################################################################
