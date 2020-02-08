@@ -8,6 +8,7 @@ import authapi
 import re
 import sqlalchemy
 import requests
+import getpass
 
 
 # SETUP ######################################################################
@@ -70,8 +71,8 @@ class PiEngine():
                     2: 'sell no',
                     3: 'sell yes'}
 
-    def __init__(self, max_quantity=850, authenticate=True):
-        self.email = ''
+    def __init__(self, password=None, max_quantity=850, authenticate=True):
+        self.email = None
         self.password = ''
         self.authenticated = False
         self.max_quantity = min(max_quantity, 850)
@@ -79,7 +80,12 @@ class PiEngine():
         self.response = None
         if authenticate:
             self.email = authapi.predictit.email
-            self.password = authapi.predictit.password
+            if password is not None:
+                self.password = password
+            else:
+                self.password = authapi.predictit.password
+            if self.password == '':
+                self.password = getpass.getpass('PredictIt Password: ')
             self.authenticate_session()
             self.update_book()
             self.update_open_orders()

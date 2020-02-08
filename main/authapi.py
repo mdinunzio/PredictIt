@@ -76,9 +76,6 @@ def _setup_predictit():
     with open(predictit_fl, 'r') as f:
         predictit_json = json.load(f)
     predictit = PredictItCredentials(**predictit_json)
-    if predictit.password == '':
-        pw = getpass.getpass('PredictIt Password: ')
-        predictit.password = pw
 
 
 _setup_twitter()
