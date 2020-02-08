@@ -82,6 +82,7 @@ class PiEngine():
         self.authenticate_session()
         self.update_book()
         self.update_open_orders()
+        self.update_api_df()
 
     def authenticate_session(self):
         """
@@ -141,7 +142,36 @@ class PiEngine():
         """
         return self._make_safe_request('post', *args, **kwargs)
 
+    def update_api_df(self):
+        """
+        Return a JSON-style dictionary of PredictIt.org API data.
+        """
+        rsrc_url = f'{PI_URL}/api/marketdata/all/'
+        response = self.get(rsrc_url)
+        api_data = response.json()
+        markets = api_data['markets']
+        api_list = []
+        for market in markets:
+            m_df = pd.DataFrame(market).drop('contracts', axis=1)
+            c_df = pd.DataFrame(market['contracts'])
+            mc_df = pd.merge(m_df, c_df, left_index=True, right_index=True,
+                             suffixes=('Market', 'Contract'))
+            api_list.append(mc_df)
+        api_df = pd.concat(api_list)
+        api_df = api_df.reset_index(drop=True)
+        api_df.columns = [to_snake(x) for x
+                          in api_df.columns]
+        col_map = {'time_stamp': 'predictit_ts'}
+        api_df = api_df.rename(columns=col_map)
+        api_df['predictit_ts'] = api_df['predictit_ts'].map(to_timetype)
+        api_df['date_end'] = api_df['date_end'].map(to_timetype)
+        self.api_df = api_df
+
     def get_quotes(self, contract_id):
+        """
+        Return a DataFrame containing the quotes and depth
+        of a contract's market.
+        """
         rsrc_url = f'{PI_URL}/api/Trade/{contract_id:.0f}/OrderBook'
         quote_data = self.get(rsrc_url).json()
         yes_qts_data = quote_data['yesOrders']
@@ -170,6 +200,9 @@ class PiEngine():
         return quotes
 
     def update_book(self):
+        """
+        Update current book of current positions.
+        """
         rsrc_url = f'{PI_URL}/api/Profile/Shares'
         response = self.get(rsrc_url)
         book_data = response.json()
@@ -277,6 +310,10 @@ class PiEngine():
         print('Order placed')
 
     def cancel_orders(self, offer_ids):
+        """
+        Cancel orders for the list of given offer_ids.
+        If '*' or 'all' is used, all oustanding orders will be cancelled.
+        """
         self.update_book()
         self.update_open_orders()
         if isinstance(offer_ids, str) and offer_ids.lower() in ('*', 'all'):
@@ -298,20 +335,6 @@ class PiEngine():
         self.update_open_orders()
 
 # MAIN #######################################################################
-
-def get_pi_data():
-    """
-    Returns a JSON-style dictionary of PredictIt.org API data.
-    """
-    api_url = r'https://www.predictit.org/api/marketdata/all/'
-    http = urllib3.PoolManager()
-    response = http.request('GET', api_url)
-
-    data_enc = response.data
-    data_str = data_enc.decode('utf-8')
-
-    pi_data = json.loads(data_str)
-    return pi_data
 
 
 def get_pi_df(pi_data=None, refine=True):
@@ -448,37 +471,6 @@ def get_market_meta(market_id):
     mkt_data = json.loads(data_str)
     mkt_s = pd.Series(mkt_data)
     return mkt_s
-
-
-def get_order_book(contract_id):
-    """
-    Return a Dataframe containing the order book for a given contract.
-    """
-    http = urllib3.PoolManager()
-    headers = {'Accept': 'application/json, text/plain, */*',
-               'Accept-Encoding': 'gzip, deflate, br',
-               'Accept-Language': 'en-US,en;q=0.9,it;q=0.8',
-               'Authorization': authapi.pixhr.authorization,
-               'Connection': 'keep-alive',
-               'Cookie': authapi.pixhr.cookie,
-               'Host': 'www.predictit.org',
-               'Referer': 'https://www.predictit.org',
-               'Sec-Fetch-Mode': 'cors',
-               'Sec-Fetch-Site': 'same-origin',
-               'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36'}
-    ob_url = 'https://www.predictit.org/api/Trade/{:.0f}/OrderBook'
-    ob_url = ob_url.format(contract_id)
-    response = http.request('GET', ob_url, headers=headers)
-    data_enc = response.data
-    data_str = data_enc.decode('utf-8')
-    ob_data = json.loads(data_str)
-    yes_ob_data = ob_data['yesOrders']
-    no_ob_data = ob_data['noOrders']
-    yes_ob_df = pd.DataFrame(yes_ob_data)
-    no_ob_df = pd.DataFrame(no_ob_data)
-    ob_df = pd.concat([yes_ob_df, no_ob_df])
-    ob_df = ob_df.reset_index(drop=True)
-    return ob_df
 
 
 def get_low_risk(threshold=.99, contracts=None, export=False):
