@@ -283,10 +283,18 @@ class PiEngine():
             offer_ids = self.open_orders['offer_id'].unique().tolist()
         if isinstance(offer_ids, int) or isinstance(offer_ids, float):
             offer_ids = [offer_ids]
+        successes = []
+        errors = []
         for offer_id in offer_ids:
             rsrc_url = f'{PI_URL}/api/Trade/CancelOffer/{offer_id}'
-            self.post(rsrc_url)
-        self.book()
+            response = self.post(rsrc_url)
+            if response:
+                successes.append(offer_id)
+            else:
+                errors.append(offer_id)
+        print(f'Cancelled: {len(successes)}/{len(offer_ids)}')
+        print(f'Errors:    {len(errors)}/{len(offer_ids)}')
+        self.update_book()
         self.update_open_orders()
 
 # MAIN #######################################################################
