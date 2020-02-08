@@ -1,9 +1,8 @@
 import json
 import os
 import sys
+import getpass
 from dataclasses import dataclass
-from sympy.printing import str
-from sqlalchemy.engine import strategies
 
 
 # SETUP ######################################################################
@@ -16,13 +15,12 @@ local_dir = os.path.abspath(os.path.join(main_dir, '..', 'local'))
 # Globals
 twitter = None
 pgdb = None
-pixhr = None
 predictit = None
+
 
 # MAIN #######################################################################
 
 # Objects
-
 @dataclass
 class OauthCredentials:
     api_key: str
@@ -30,21 +28,19 @@ class OauthCredentials:
     access_token: str
     access_token_secret: str
 
+
 @dataclass
 class SqlCredentials:
     db_name: str
     username: str
     password: str
 
+
 @dataclass
 class PredictItCredentials:
     email: str
-    password: str = None
+    password: str = ''
 
-@dataclass
-class XhrCredentials:
-    authorization: str
-    cookie: str
 
 # Twitter
 def _setup_twitter():
@@ -71,18 +67,6 @@ def _setup_pgdb():
 
 
 # PredictIt Cookies and header authorization
-def _setup_pixhr():
-    """
-    Set up the XhrCredentials global variable.
-    """
-    global pixhr
-    pixhr_fl = os.path.join(local_dir, 'pixhr.json')
-    with open(pixhr_fl, 'r') as f:
-        pixhr_json = json.load(f)
-    pixhr = XhrCredentials(**pixhr_json)
-
-
-# PredictIt Cookies and header authorization
 def _setup_predictit():
     """
     Set up the PredictItCredentials global variable.
@@ -92,10 +76,12 @@ def _setup_predictit():
     with open(predictit_fl, 'r') as f:
         predictit_json = json.load(f)
     predictit = PredictItCredentials(**predictit_json)
+    if predictit.password == '':
+        pw = getpass.getpass('PredictIt Password: ')
+        predictit.password = pw
 
 
 _setup_twitter()
 _setup_pgdb()
-_setup_pixhr()
 _setup_predictit()
 
