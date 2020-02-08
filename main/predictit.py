@@ -66,10 +66,16 @@ class PiEngine():
         if self.password == '':
             self.password = getpass.getpass('Enter PI Password:')
         self.max_quantity = min(max_quantity, 850)
+        self.max_timeouts = 5
         self.response = None
         self.authenticate_session()
+        self.update_book()
+        self.update_open_orders()
 
     def authenticate_session(self):
+        """
+        Initiate and authenticate requests session.
+        """
         self.session = requests.Session()
         self.session.headers = {
             'Accept': 'application/json, text/plain, */*',
@@ -80,8 +86,8 @@ class PiEngine():
             'Referer': 'https://www.predictit.org',
             'Sec-Fetch-Mode': 'cors',
             'Sec-Fetch-Site': 'same-origin',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ' \
-                          'AppleWebKit/537.36 (KHTML, like Gecko) ' \
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                          'AppleWebKit/537.36 (KHTML, like Gecko) '
                           'Chrome/79.0.3945.130 Safari/537.36'}
         self.response = self.session.post(
             f'{PI_URL}/api/Account/token',
@@ -92,12 +98,41 @@ class PiEngine():
         token = self.response.json()['access_token']
         self.session.headers['Authorization'] = 'Bearer ' + token
         print('Authenticated')
-        self.update_book()
-        self.update_open_orders()
+
+    def _make_safe_request(self, request_type, *args, **kwargs):
+        """
+        Return and store a requests response using current session,
+        re-authenticating if necessary.
+        """
+        timeout_counter = 0
+        request_fn = getattr(self.session, request_type)
+        while timeout_counter < self.max_timeouts:
+            response = request_fn(*args, **kwargs)
+            status_code = response.status_code
+            if status_code != 401:
+                break
+            self.authenticate_session()
+            timeout_counter += 1
+        self.response = response
+        return response
+
+    def get(self, *args, **kwargs):
+        """
+        Return and store a get request response re-authenticating
+        if necessary.
+        """
+        return self._make_safe_request('get', *args, **kwargs)
+
+    def post(self, *args, **kwargs):
+        """
+        Return and store a post request response re-authenticating
+        if necessary.
+        """
+        return self._make_safe_request('post', *args, **kwargs)
 
     def get_quotes(self, contract_id):
         rsrc_url = f'{PI_URL}/api/Trade/{contract_id:.0f}/OrderBook'
-        quote_data = self.session.get(rsrc_url).json()
+        quote_data = self.get(rsrc_url).json()
         yes_qts_data = quote_data['yesOrders']
         no_qts_data = quote_data['noOrders']
         yes_qts_df = pd.DataFrame(yes_qts_data)
@@ -125,8 +160,8 @@ class PiEngine():
 
     def update_book(self):
         rsrc_url = f'{PI_URL}/api/Profile/Shares'
-        self.response = self.session.get(rsrc_url)
-        book_data = self.response.json()
+        response = self.get(rsrc_url)
+        book_data = response.json()
         markets = book_data['markets']
         book_list = []
         for market in markets:
@@ -176,14 +211,16 @@ class PiEngine():
         contract_list = []
         for cid in open_contracts:
             rsrc_url = f'{PI_URL}/api/Profile/contract/{cid}/Offers'
-            self.response = self.session.get(rsrc_url)
-            cd_df = pd.DataFrame(self.response.json()).drop('offers', axis=1)
-            o_df = pd.DataFrame(self.response.json()['offers'])
+            response = self.get(rsrc_url)
+            cd_df = pd.DataFrame(response.json()).drop('offers', axis=1)
+            o_df = pd.DataFrame(response.json()['offers'])
             oc_df = pd.merge(left=cd_df, right=o_df,
                              left_index=True, right_index=True,
                              suffixes=('', 'Offer'))
             contract_list.append(oc_df)
         open_orders = pd.concat(contract_list)
+        open_orders = open_orders.drop('contractIdOffer', axis=1)
+        # TODO refine
         self.open_orders = open_orders
 
     def place_order(self, contract_id, trade_type, quantity, price):
@@ -208,9 +245,15 @@ class PiEngine():
                 'pricePerShare': price,
                 'contractId': contract_id,
                 'tradeType': trade_type}
-        self.response = self.session.post(rsrc_url, data=data)
+        response = self.post(rsrc_url, data=data)
         self.raise_for_status()
         print('Order placed')
+
+    def cancel_orders(self, offer_ids):
+        self.update_open_orders()
+        rsrc_url = f'{PI_URL}/api/Trade/CancelOffer/{order_id}'
+        if isinstance(offer_id, str) and offer_id.lower() in ('*', 'all'):
+            offer_ids =
 
 
 # MAIN #######################################################################
