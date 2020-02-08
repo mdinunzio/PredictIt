@@ -92,6 +92,8 @@ class PiEngine():
         token = self.response.json()['access_token']
         self.session.headers['Authorization'] = 'Bearer ' + token
         print('Authenticated')
+        self.update_book()
+        self.update_open_orders()
 
     def get_quotes(self, contract_id):
         rsrc_url = f'{PI_URL}/api/Trade/{contract_id:.0f}/OrderBook'
@@ -130,7 +132,7 @@ class PiEngine():
         for market in markets:
             m_df = pd.DataFrame(market).drop('marketContracts', axis=1)
             c_df = pd.DataFrame(market['marketContracts'])
-            mc_df = pd.merge(m_df, c_df, 
+            mc_df = pd.merge(m_df, c_df,
                              left_index=True, right_index=True,
                              suffixes=('Market', 'Contract'))
             book_list.append(mc_df)
@@ -143,14 +145,14 @@ class PiEngine():
             x['bestNoPrice'] - x['userAveragePricePerShare'],
             axis=1)
         book['pl'] = book['edge'] * book['userQuantity']
-        psn_cols = \
+        book_cols = \
             ['marketShortName', 'contractName', 'userPrediction',
              'userQuantity', 'userAveragePricePerShare',
              'bestYesPrice', 'bestNoPrice', 'edge', 'pl',
              'userOpenOrdersBuyQuantity', 'userOpenOrdersSellQuantity',
              'lastTradePrice', 'lastClosePrice', 'marketSharesTraded',
              'marketId', 'contractId']
-        psn_map = \
+        book_map = \
             {'marketShortName': 'market', 'contractName': 'contract',
              'userPrediction': 'pred', 'userQuantity': 'shares',
              'userAveragePricePerShare': 'vwap',
@@ -159,10 +161,30 @@ class PiEngine():
              'bestYesPrice': 'bestYes', 'bestNoPrice': 'bestNo',
              'lastTradePrice': 'last', 'lastClosePrice': 'close',
              'marketSharesTraded': 'mktVolume'}
-        book = book[psn_cols]
-        book = book.rename(columns=psn_map)
+        book = book[book_cols]
+        book = book.rename(columns=book_map)
         book = book.rename(columns=to_snake)
         self.book = book
+
+    def update_open_orders(self):
+        """
+        Update the open_orders attribute.
+        Must run update_book beforehand for most up-to-date results.
+        """
+        open_df = self.book[self.book[['open_buys', 'open_sells']].any(axis=1)]
+        open_contracts = open_df['contract_id'].unique().tolist()
+        contract_list = []
+        for cid in open_contracts:
+            rsrc_url = f'{PI_URL}/api/Profile/contract/{cid}/Offers'
+            self.response = self.session.get(rsrc_url)
+            cd_df = pd.DataFrame(self.response.json()).drop('offers', axis=1)
+            o_df = pd.DataFrame(self.response.json()['offers'])
+            oc_df = pd.merge(left=cd_df, right=o_df,
+                             left_index=True, right_index=True,
+                             suffixes=('', 'Offer'))
+            contract_list.append(oc_df)
+        open_orders = pd.concat(contract_list)
+        self.open_orders = open_orders
 
     def place_order(self, contract_id, trade_type, quantity, price):
         """
@@ -180,7 +202,7 @@ class PiEngine():
         if quantity > self.max_quantity:
             raise ValueError(
                 f'{quantity} exceeds maximum quantity of {self.max_quantity}')
-        
+
         rsrc_url = f'{PI_URL}/api/Trade/SubmitTrade'
         data = {'quantity': quantity,
                 'pricePerShare': price,
@@ -189,9 +211,6 @@ class PiEngine():
         self.response = self.session.post(rsrc_url, data=data)
         self.raise_for_status()
         print('Order placed')
-        
-            
-        
 
 
 # MAIN #######################################################################
