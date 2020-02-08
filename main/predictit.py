@@ -71,17 +71,21 @@ class PiEngine():
                     2: 'sell no',
                     3: 'sell yes'}
 
-    def __init__(self, max_quantity=850):
-        self.email = authapi.predictit.email
-        self.password = authapi.predictit.password
-        if self.password == '':
-            self.password = getpass.getpass('Enter PI Password:')
+    def __init__(self, max_quantity=850, authenticate=True):
+        self.email = ''
+        self.password = ''
+        self.authenticated = False
         self.max_quantity = min(max_quantity, 850)
         self.max_timeouts = 5
         self.response = None
-        self.authenticate_session()
-        self.update_book()
-        self.update_open_orders()
+        if authenticate:
+            self.email = authapi.predictit.email
+            self.password = authapi.predictit.password
+            if self.password == '':
+                self.password = getpass.getpass('Enter PI Password:')
+            self.authenticate_session()
+            self.update_book()
+            self.update_open_orders()
         self.update_api_df()
 
     def authenticate_session(self):
@@ -107,8 +111,10 @@ class PiEngine():
                   'grant_type': 'password', 'rememberMe': 'true'})
         if not self.response:
             print('Not Authenticated')
+            return
         token = self.response.json()['access_token']
         self.session.headers['Authorization'] = 'Bearer ' + token
+        self.authenticated = True
         print('Authenticated')
 
     def _make_safe_request(self, request_type, *args, **kwargs):
@@ -123,8 +129,12 @@ class PiEngine():
             status_code = response.status_code
             if status_code != 401:
                 break
+            self.authenticated = False
             self.authenticate_session()
             timeout_counter += 1
+        if timeout_counter >= self.max_timeouts:
+            print(f'Quitting after {timeout_counter} timeouts')
+            print(response.text)
         self.response = response
         return response
 
@@ -337,33 +347,6 @@ class PiEngine():
 # MAIN #######################################################################
 
 
-def get_pi_df(pi_data=None, refine=True):
-    """
-    Return a DataFrame of all PredictIt data.
-    """
-    if pi_data is None:
-        pi_data = get_pi_data()
-    markets = pi_data['markets']
-    pi_list = []
-
-    for mkt in markets:
-        m_df = pd.DataFrame(mkt).drop('contracts', axis=1)
-        c_df = pd.DataFrame(mkt['contracts'])
-        mc_df = pd.merge(m_df, c_df, left_index=True, right_index=True,
-                         suffixes=('Market', 'Contract'))
-        pi_list.append(mc_df)
-    pi_df = pd.concat(pi_list)
-    pi_df = pi_df.reset_index(drop=True)
-    if refine:
-        pi_df.columns = [to_snake(x) for x
-                         in pi_df.columns]
-        col_map = {'time_stamp': 'predictit_ts'}
-        pi_df = pi_df.rename(columns=col_map)
-        pi_df['predictit_ts'] = pi_df['predictit_ts'].map(to_timetype)
-        pi_df['date_end'] = pi_df['date_end'].map(to_timetype)
-    return pi_df
-
-
 def store_pi_df(pi_df=None, update_ts=None):
     """
     Store the PredictIt API data in the PiApi table.
@@ -382,58 +365,7 @@ def store_pi_df(pi_df=None, update_ts=None):
                 host='localhost',
                 port=5432,
                 database=authapi.pgdb.db_name))
-    ul_df.to_sql('piapi', engine, if_exists='append',index=False)
-    
-
-
-def get_markets(pi_data=None):
-    """
-    Return a DataFrame of formatted market data.
-    """
-    if pi_data is None:
-        pi_data = get_pi_data()
-    market_data = pi_data['markets']
-    markets = pd.DataFrame(data=market_data)
-    col_map = {'id': 'marketId', 'shortName': 'market'}
-    markets = markets.rename(columns=col_map)
-    drop_cols = ['name', 'image', 'contracts']
-    markets = markets.drop(drop_cols, axis=1)
-    return markets
-
-
-def get_contracts(pi_data=None):
-    """
-    Return a DataFrame of formatted contract data.
-    """
-    if pi_data is None:
-        pi_data = get_pi_data()
-    markets = pi_data['markets']
-
-    contract_list = []
-
-    for mkt in markets:
-        c = pd.DataFrame(mkt['contracts'])
-        c['marketId'] = mkt['id']
-        c['market'] = mkt['shortName']
-        c['updateTime'] = mkt['timeStamp']
-        c['url'] = mkt['url']
-        contract_list.append(c)
-
-    contracts = pd.concat(contract_list)
-    contracts = contracts.reset_index(drop=True)
-    c_cols = ['market', 'shortName', 'bestBuyYesCost', 'bestBuyNoCost',
-              'lastTradePrice', 'lastClosePrice', 'dateEnd', 'updateTime',
-              'marketId', 'url']
-    contracts = contracts[c_cols]
-    c_map = {'shortName': 'contract', 'bestBuyYesCost': 'yes',
-             'bestBuyNoCost': 'no', 'lastTradePrice': 'last', 
-             'lastClosePrice': 'close'}
-    contracts = contracts.rename(columns=c_map)
-    contracts['dateEnd'] = contracts['dateEnd'].map(to_timetype)
-    contracts['updateTime'] = contracts['updateTime'].map(
-        lambda x: datetime.datetime.strptime(x[:-3], '%Y-%m-%dT%H:%M:%S.%f'))
-    return contracts
-
+    ul_df.to_sql('piapi', engine, if_exists='append', index=False)
 
 def get_twitter_markets(pi_data=None):
     """
