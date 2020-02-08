@@ -60,6 +60,17 @@ class PiEngine():
     """
     An engine for interacting with PredictIt's non-API functionality and data.
     """
+
+    trade_to_int = {'buy no': 0,
+                    'buy yes': 1,
+                    'sell no': 2,
+                    'sell yes': 3}
+
+    int_to_trade = {0: 'buy no',
+                    1: 'buy yes',
+                    2: 'sell no',
+                    3: 'sell yes'}
+
     def __init__(self, max_quantity=850):
         self.email = authapi.predictit.email
         self.password = authapi.predictit.password
@@ -218,9 +229,23 @@ class PiEngine():
                              left_index=True, right_index=True,
                              suffixes=('', 'Offer'))
             contract_list.append(oc_df)
-        open_orders = pd.concat(contract_list)
-        open_orders = open_orders.drop('contractIdOffer', axis=1)
-        # TODO refine
+        oo_cols = ['contractName', 'tradeType', 'pricePerShare',
+                   'quantity', 'remainingQuantity', 'dateCreated',
+                   'contractId', 'offerId']
+        if len(contract_list) == 0:
+            open_orders = pd.DataFrame(columns=oo_cols)
+        else:
+            open_orders = pd.concat(contract_list)
+        open_orders = open_orders[oo_cols]
+        oo_map = {'contractName': 'contract', 'tradeType': 'type',
+                  'pricePerShare': 'price',
+                  'quantity': 'qty',
+                  'remainingQuantity': 'left',
+                  'dateCreated': 'entry_ts'}
+        open_orders = open_orders.rename(columns=oo_map)
+        open_orders = open_orders.rename(columns=to_snake)
+        open_orders['type'] = open_orders['type'].map(self.int_to_trade)
+        open_orders['entry_ts'] = open_orders['entry_ts'].map(to_timetype)
         self.open_orders = open_orders
 
     def place_order(self, contract_id, trade_type, quantity, price):
@@ -229,32 +254,40 @@ class PiEngine():
         Valid trade types are buy_no, buy_yes, sell_no, and sell_yes.
         You can only sell when you are long shares, and therefore
         """
-        trade_map = {'buy no': 0,
-                     'buy yes': 1,
-                     'sell no': 2,
-                     'sell yes': 3}
         trade_type = trade_type.lower()
-        if trade_type not in trade_map:
+        price = float(price)
+        if trade_type not in self.trade_map:
             raise ValueError('Invalid trade type')
         if quantity > self.max_quantity:
             raise ValueError(
                 f'{quantity} exceeds maximum quantity of {self.max_quantity}')
-
+        if price < 1 or price > 99:
+            raise ValueError('Price must be between 1 and 99')
+        if not price.is_integer():
+            raise ValueError('Price must be integer between 1 and 99')
         rsrc_url = f'{PI_URL}/api/Trade/SubmitTrade'
         data = {'quantity': quantity,
                 'pricePerShare': price,
                 'contractId': contract_id,
                 'tradeType': trade_type}
         response = self.post(rsrc_url, data=data)
-        self.raise_for_status()
+        response.raise_for_status()
+        self.update_book()
+        self.update_open_orders()
         print('Order placed')
 
     def cancel_orders(self, offer_ids):
+        self.update_book()
         self.update_open_orders()
-        rsrc_url = f'{PI_URL}/api/Trade/CancelOffer/{order_id}'
-        if isinstance(offer_id, str) and offer_id.lower() in ('*', 'all'):
-            offer_ids =
-
+        if isinstance(offer_ids, str) and offer_ids.lower() in ('*', 'all'):
+            offer_ids = self.open_orders['offer_id'].unique().tolist()
+        if isinstance(offer_ids, int) or isinstance(offer_ids, float):
+            offer_ids = [offer_ids]
+        for offer_id in offer_ids:
+            rsrc_url = f'{PI_URL}/api/Trade/CancelOffer/{offer_id}'
+            self.post(rsrc_url)
+        self.book()
+        self.update_open_orders()
 
 # MAIN #######################################################################
 
