@@ -22,6 +22,9 @@ pd.set_option('display.width', 1000)
 USR_DIR = os.environ['USERPROFILE']
 DESKTOP = os.path.join(USR_DIR, 'Desktop')
 
+# URLS
+PI_URL = r'https://www.predictit.org'
+
 # Regex
 _camel_pattern = re.compile(r'(?<!^)(?=[A-Z])')
 
@@ -57,11 +60,13 @@ class PiEngine():
     """
     An engine for interacting with PredictIt's non-API functionality and data.
     """
-    def __init__(self):
+    def __init__(self, max_quantity=850):
         self.email = authapi.predictit.email
         self.password = authapi.predictit.password
         if self.password == '':
             self.password = getpass.getpass('Enter PI Password:')
+        self.max_quantity = min(max_quantity, 850)
+        self.response = None
         self.authenticate_session()
 
     def authenticate_session(self):
@@ -78,40 +83,114 @@ class PiEngine():
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ' \
                           'AppleWebKit/537.36 (KHTML, like Gecko) ' \
                           'Chrome/79.0.3945.130 Safari/537.36'}
-        response = self.session.post(
-            r'https://www.predictit.org/api/Account/token',
+        self.response = self.session.post(
+            f'{PI_URL}/api/Account/token',
             data={'email': self.email, 'password': self.password,
                   'grant_type': 'password', 'rememberMe': 'true'})
-        token = response.json()['access_token']
+        if not self.response:
+            print('Not Authenticated')
+        token = self.response.json()['access_token']
         self.session.headers['Authorization'] = 'Bearer ' + token
         print('Authenticated')
-        
-    def get_contract_market(self, contract_id):
-        rsrc_url = f'https://www.predictit.org/api/Trade/{contract_id:.0f}/OrderBook'
-        mkt = self.session.get(rsrc_url).json()
-        yes_mkt = mkt['yesOrders']
-        no_mkt = mkt['noOrders']
-        yes_mkt_df = pd.DataFrame(yes_mkt)
-        no_mkt_df = pd.DataFrame(no_mkt)
-        mkt_df = pd.concat([yes_mkt_df, no_mkt_df])
-        mkt_df = mkt_df.reset_index(drop=True)
-        mkt_df = mkt_df.rename(columns=lambda x: to_snake(x))
-        return mkt_df
 
-    def get_positions(self):
-        rsrc_url = r'https://www.predictit.org/api/Profile/Shares'
-        psns = self.session.get(rsrc_url).json()
-        return psns
+    def get_quotes(self, contract_id):
+        rsrc_url = f'{PI_URL}/api/Trade/{contract_id:.0f}/OrderBook'
+        quote_data = self.session.get(rsrc_url).json()
+        yes_qts_data = quote_data['yesOrders']
+        no_qts_data = quote_data['noOrders']
+        yes_qts_df = pd.DataFrame(yes_qts_data)
+        no_qts_df = pd.DataFrame(no_qts_data)
+        qts_cols_mrg = ['pricePerShare', 'quantity']
+        qts_cols_fnl = ['contractId', 'quantityYes',
+                        'pricePerShareYes', 'pricePerShareNo',
+                        'quantityNo']
+        if len(yes_qts_df) > 0 and len(no_qts_df) > 0:
+            quotes = pd.merge(left=yes_qts_df[qts_cols_mrg],
+                              right=no_qts_df[qts_cols_mrg],
+                              left_index=True,
+                              right_index=True,
+                              how='outer',
+                              suffixes=('Yes', 'No'))
+            quotes['contractId'] = contract_id
+        quotes = quotes[qts_cols_fnl]
+        qts_map = {'quantityYes': 'qtyYes',
+                   'quantityNo': 'qtyNo',
+                   'pricePerShareYes': 'pxYes',
+                   'pricePerShareNo': 'pxNo'}
+        quotes = quotes.rename(columns=qts_map)
+        quotes = quotes.rename(columns=to_snake)
+        return quotes
+
+    def update_book(self):
+        rsrc_url = f'{PI_URL}/api/Profile/Shares'
+        self.response = self.session.get(rsrc_url)
+        book_data = self.response.json()
+        markets = book_data['markets']
+        book_list = []
+        for market in markets:
+            m_df = pd.DataFrame(market).drop('marketContracts', axis=1)
+            c_df = pd.DataFrame(market['marketContracts'])
+            mc_df = pd.merge(m_df, c_df, 
+                             left_index=True, right_index=True,
+                             suffixes=('Market', 'Contract'))
+            book_list.append(mc_df)
+        book = pd.concat(book_list)
+        book = book.reset_index(drop=True)
+        book['edge'] = book.apply(
+            lambda x:
+            x['bestYesPrice'] - x['userAveragePricePerShare']
+            if x['userPrediction'] else
+            x['bestNoPrice'] - x['userAveragePricePerShare'],
+            axis=1)
+        book['pl'] = book['edge'] * book['userQuantity']
+        psn_cols = \
+            ['marketShortName', 'contractName', 'userPrediction',
+             'userQuantity', 'userAveragePricePerShare',
+             'bestYesPrice', 'bestNoPrice', 'edge', 'pl',
+             'userOpenOrdersBuyQuantity', 'userOpenOrdersSellQuantity',
+             'lastTradePrice', 'lastClosePrice', 'marketSharesTraded',
+             'marketId', 'contractId']
+        psn_map = \
+            {'marketShortName': 'market', 'contractName': 'contract',
+             'userPrediction': 'pred', 'userQuantity': 'shares',
+             'userAveragePricePerShare': 'vwap',
+             'userOpenOrdersBuyQuantity': 'openBuys',
+             'userOpenOrdersSellQuantity': 'openSells',
+             'bestYesPrice': 'bestYes', 'bestNoPrice': 'bestNo',
+             'lastTradePrice': 'last', 'lastClosePrice': 'close',
+             'marketSharesTraded': 'mktVolume'}
+        book = book[psn_cols]
+        book = book.rename(columns=psn_map)
+        book = book.rename(columns=to_snake)
+        self.book = book
 
     def place_order(self, contract_id, trade_type, quantity, price):
-        rsrc_url = r'https://www.predictit.org/api/Trade/SubmitTrade'
+        """
+        Place an order on PredictIt.com.
+        Valid trade types are buy_no, buy_yes, sell_no, and sell_yes.
+        You can only sell when you are long shares, and therefore
+        """
+        trade_map = {'buy no': 0,
+                     'buy yes': 1,
+                     'sell no': 2,
+                     'sell yes': 3}
+        trade_type = trade_type.lower()
+        if trade_type not in trade_map:
+            raise ValueError('Invalid trade type')
+        if quantity > self.max_quantity:
+            raise ValueError(
+                f'{quantity} exceeds maximum quantity of {self.max_quantity}')
+        
+        rsrc_url = f'{PI_URL}/api/Trade/SubmitTrade'
         data = {'quantity': quantity,
                 'pricePerShare': price,
                 'contractId': contract_id,
-                'tradeType': 0}
-        response = self.session.post(rsrc_url, data=data)
-        if response:
-            print('Order placed')
+                'tradeType': trade_type}
+        self.response = self.session.post(rsrc_url, data=data)
+        self.raise_for_status()
+        print('Order placed')
+        
+            
         
 
 
