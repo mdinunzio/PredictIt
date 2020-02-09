@@ -22,19 +22,17 @@ df = pd.read_sql(sql=test_q, con=PI_PROD)
 # MAIN FUNCTIONALITY #########################################################
 
 def select(sql, con=PI_PROD):
-    return pd.read_sql(sql=test_q, con=PI_PROD)
+    return pd.read_sql(sql=sql, con=con)
 
 
 def insert(df, name, con=PI_PROD):
     df.to_sql(name, con=con, if_exists='append', index=False)
 
 
-def store_pi_df(pi_df, update_ts=None):
+def get_twitter_users_db(con=PI_PROD):
     """
-    Store the PredictIt API data in the PiApi table.
+    Return a list of twitter users present in the database.
     """
-    if update_ts is None:
-        update_ts = datetime.datetime.now()
-    ul_df = pi_df.copy()
-    ul_df['update_ts'] = update_ts
-    insert(ul_df, 'piapi')
+    q = 'SELECT "user" FROM tweetcounts GROUP BY "user"'
+    twitter_users_global = select(q)
+    twitter_users_global = twitter_users_global['user'].tolist()
