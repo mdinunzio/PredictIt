@@ -87,8 +87,7 @@ class PiEngine():
             if self.password is None:
                 self.password = getpass.getpass('PredictIt Password: ')
             self.initiate_session(authenticate=True)
-            self.update_book()
-            self.update_open_orders()
+            self.update_open_orders()  # Also updates book
         else:
             self.initiate_session(authenticate=False)
         self.update_api_df()
@@ -278,8 +277,8 @@ class PiEngine():
     def update_open_orders(self):
         """
         Update the open_orders attribute.
-        Must run update_book beforehand for most up-to-date results.
         """
+        self.update_book()
         open_df = self.book[self.book[['open_buys', 'open_sells']].any(axis=1)]
         open_contracts = open_df['contract_id'].unique().tolist()
         contract_list = []

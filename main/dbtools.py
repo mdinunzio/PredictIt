@@ -1,6 +1,7 @@
 import authapi
 import sqlalchemy
 import pandas as pd
+import datetime
 
 
 # SETUP ######################################################################
@@ -24,18 +25,16 @@ def select(sql, con=PI_PROD):
     return pd.read_sql(sql=test_q, con=PI_PROD)
 
 
-def insert(df, con=PI_PROD):
-    pass
+def insert(df, name, con=PI_PROD):
+    df.to_sql(name, con=con, if_exists='append', index=False)
 
-def store_pi_df(pi_df=None, update_ts=None):
+
+def store_pi_df(pi_df, update_ts=None):
     """
     Store the PredictIt API data in the PiApi table.
     """
-    if pi_df is None:
-        pi_df = get_pi_df()
     if update_ts is None:
         update_ts = datetime.datetime.now()
     ul_df = pi_df.copy()
     ul_df['update_ts'] = update_ts
-
-    ul_df.to_sql('piapi', engine, if_exists='append', index=False)
+    insert(ul_df, 'piapi')
