@@ -36,7 +36,7 @@ class SqlCredentials:
     password: str
     host: str
     port: int
-    db: str
+    database: str
 
 
 @dataclass
