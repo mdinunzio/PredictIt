@@ -31,9 +31,11 @@ class OauthCredentials:
 
 @dataclass
 class SqlCredentials:
-    db_name: str
     username: str
     password: str
+    host: str
+    port: int
+    db: str
 
 
 @dataclass

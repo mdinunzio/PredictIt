@@ -73,7 +73,7 @@ class PiEngine():
 
     def __init__(self, password=None, max_quantity=850, authenticate=True):
         self.email = None
-        self.password = ''
+        self.password = None
         self.authenticated = False
         self.max_quantity = min(max_quantity, 850)
         self.max_timeouts = 5
@@ -84,14 +84,16 @@ class PiEngine():
                 self.password = password
             else:
                 self.password = authapi.predictit.password
-            if self.password == '':
+            if self.password is None:
                 self.password = getpass.getpass('PredictIt Password: ')
-            self.authenticate_session()
+            self.initiate_session(authenticate=True)
             self.update_book()
             self.update_open_orders()
+        else:
+            self.initiate_session(authenticate=False)
         self.update_api_df()
 
-    def authenticate_session(self):
+    def initiate_session(self, authenticate):
         """
         Initiate and authenticate requests session.
         """
@@ -108,6 +110,11 @@ class PiEngine():
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
                           'AppleWebKit/537.36 (KHTML, like Gecko) '
                           'Chrome/79.0.3945.130 Safari/537.36'}
+        if not authenticate:
+            return
+        if self.email is None or self.password is None:
+            print('Cannot authenticate session without credentials')
+            return
         self.response = self.session.post(
             f'{PI_URL}/api/Account/token',
             data={'email': self.email, 'password': self.password,
@@ -133,7 +140,7 @@ class PiEngine():
             if status_code != 401:
                 break
             self.authenticated = False
-            self.authenticate_session()
+            self.initiate_session(authenticate=True)
             timeout_counter += 1
         if timeout_counter >= self.max_timeouts:
             print(f'Quitting after {timeout_counter} timeouts')
@@ -358,8 +365,6 @@ class PiEngine():
         self.update_open_orders()
 
 # MAIN #######################################################################
-
-
 
 
 def get_twitter_markets(pi_data=None):
