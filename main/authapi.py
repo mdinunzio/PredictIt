@@ -14,7 +14,8 @@ local_dir = os.path.abspath(os.path.join(main_dir, '..', 'local'))
 
 # Globals
 twitter = None
-pgdb = None
+pgdb_dev = None
+pgdb_prod = None
 predictit = None
 
 
@@ -57,15 +58,26 @@ def _setup_twitter():
 
 
 # Postgresql Database
-def _setup_pgdb():
+def _setup_pgdb_dev():
     """
-    Set up the pgdb SqlCredentials global variable.
+    Set up the pgdb_dev SqlCredentials global variable.
     """
-    global pgdb
-    pgdb_fl = os.path.join(local_dir, 'pgdb.json')
+    global pgdb_dev
+    pgdb_fl = os.path.join(local_dir, 'pgdb_dev.json')
     with open(pgdb_fl, 'r') as f:
         pgdb_json = json.load(f)
-    pgdb = SqlCredentials(**pgdb_json)
+    pgdb_dev = SqlCredentials(**pgdb_json)
+
+
+def _setup_pgdb_prod():
+    """
+    Set up the pgdb_prod SqlCredentials global variable.
+    """
+    global pgdb_prod
+    pgdb_fl = os.path.join(local_dir, 'pgdb_prod.json')
+    with open(pgdb_fl, 'r') as f:
+        pgdb_json = json.load(f)
+    pgdb_prod = SqlCredentials(**pgdb_json)
 
 
 # PredictIt Cookies and header authorization
@@ -81,6 +93,7 @@ def _setup_predictit():
 
 
 _setup_twitter()
-_setup_pgdb()
+_setup_pgdb_dev()
+_setup_pgdb_prod()
 _setup_predictit()
 
