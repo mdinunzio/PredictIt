@@ -1,5 +1,5 @@
 from predictit import PiEngine
 
-pie = PiEngine(authenticate=False)
+pie = PiEngine(authenticate=True)
 pie.cancel_orders('*')
 

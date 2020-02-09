@@ -1,18 +1,9 @@
 import authapi
 import sqlalchemy
 import pandas as pd
-from dataclasses import dataclass
 
 
-@dataclass
-class DataBaseEngine():
-    def __init__(self, credentials):
-        username: str
-        password: str
-        database: str
-        host: str
-        port: int
-
+# SETUP ######################################################################
 
 con_str = r'postgresql+psycopg2://{username:s}:{password:s}'\
           r'@{host:s}:{port:.0f}/{database:s}'
@@ -20,11 +11,21 @@ con_str = r'postgresql+psycopg2://{username:s}:{password:s}'\
 prod_conn_str = con_str.format(**authapi.pgdb_prod.__dict__)
 dev_conn_str = con_str.format(**authapi.pgdb_dev.__dict__)
 
-prod_engine = sqlalchemy.create_engine(prod_conn_str)
-dev_engine = sqlalchemy.create_engine(dev_conn_str)
+PI_PROD = sqlalchemy.create_engine(prod_conn_str)
+PI_DEV = sqlalchemy.create_engine(dev_conn_str)
 
 test_q = "SELECT * FROM tweetcounts limit 10;"
-df = pd.read_sql(sql=test_q, con=prod_engine)
+df = pd.read_sql(sql=test_q, con=PI_PROD)
+
+
+# MAIN FUNCTIONALITY #########################################################
+
+def select(sql, con=PI_PROD):
+    return pd.read_sql(sql=test_q, con=PI_PROD)
+
+
+def insert(df, con=PI_PROD):
+    pass
 
 def store_pi_df(pi_df=None, update_ts=None):
     """
