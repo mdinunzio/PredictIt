@@ -212,6 +212,16 @@ class PiEngine():
         quotes = quotes.rename(columns=to_snake)
         return quotes
 
+    def get_market_meta(self, market_id):
+        """
+        Return a Series of parsed market information including rules
+        and other specifics.
+        """
+        rsrc_url = f'{PI_URL}/api/Market{market_id}'
+        response = self.get(rsrc_url)
+        market_meta = pd.Series(response)
+        return market_meta
+
     def update_book(self):
         """
         Update current book of current positions.
@@ -350,25 +360,7 @@ class PiEngine():
 # MAIN #######################################################################
 
 
-def store_pi_df(pi_df=None, update_ts=None):
-    """
-    Store the PredictIt API data in the PiApi table.
-    """
-    if pi_df is None:
-        pi_df = get_pi_df()
-    if update_ts is None:
-        update_ts = datetime.datetime.now()
-    ul_df = pi_df.copy()
-    ul_df['update_ts'] = update_ts
-    engine = sqlalchemy.create_engine(
-        'postgresql+psycopg2://{username:s}:{password:s}'
-        '@{host:s}:{port:.0f}/{database:s}'
-        .format(username=authapi.pgdb.username,
-                password=authapi.pgdb.password,
-                host='localhost',
-                port=5432,
-                database=authapi.pgdb.db_name))
-    ul_df.to_sql('piapi', engine, if_exists='append', index=False)
+
 
 def get_twitter_markets(pi_data=None):
     """
@@ -389,23 +381,6 @@ def get_twitter_users(pi_data=None):
     twitter_users = twitter_users.unique().tolist()
     return twitter_users
 
-
-def get_market_meta(market_id):
-    """
-    Return a DataFrame of parsed market infomration including rules
-    and other specifics.
-    """
-    http = urllib3.PoolManager()
-    mkt_url = r'https://www.predictit.org/api/Market'
-    mkt_url = mkt_url + '{:.0f}'.format(market_id)
-    response = http.request('GET', mkt_url)
-
-    data_enc = response.data
-    data_str = data_enc.decode('utf-8')
-
-    mkt_data = json.loads(data_str)
-    mkt_s = pd.Series(mkt_data)
-    return mkt_s
 
 
 def get_low_risk(threshold=.99, contracts=None, export=False):
