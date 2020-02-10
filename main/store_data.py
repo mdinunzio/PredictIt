@@ -67,9 +67,10 @@ def run_main():
             delay = 60
         else:
             delay = delay + 1
+        print(f'\tSleeping {delay:.0f} seconds')
         time.sleep(delay)
 
 
 if __name__ == "__main__":
-    t = Thread(target=run_main, daemon=True)
+    t = Thread(target=run_main, daemon=False)
     t.start()
