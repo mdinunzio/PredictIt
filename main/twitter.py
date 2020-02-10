@@ -42,7 +42,7 @@ def get_tweet_counts(twitter_users=None):
             api_user = twitter_api.get_user(user)
             tweet_count = api_user.statuses_count
             d = {'user': user,
-                 'tweets' : tweet_count}
+                 'tweets': tweet_count}
             tweet_count_list.append(d)
         except Exception as e:
             print(e)

@@ -4,13 +4,14 @@ import datetime
 import time
 import dbtools as dbt
 from threading import Thread
-import re
 
 
 # SETUP ######################################################################
 
+con = dbt.PI_PROD
+
 pie = predictit.PiEngine(authenticate=False)
-twitter_users_global = dbt.get_twitter_users_db()
+twitter_users_global = dbt.get_twitter_users()
 
 
 # HELPER FUNCTIONS ###########################################################
@@ -48,20 +49,27 @@ def run_main():
             print(update_ts)
             print('\tPulling data')
             pie.update_api_df()
-            twitter_users = predictit.get_twitter_users(pi_data)
-            twitter_users_global = list(set(twitter_users +
-                                            twitter_users_global))
+            twitter_users = get_twitter_users(pie.api_df)
+            twitter_users_global = list(
+                set(twitter_users + twitter_users_global))
             tweet_counts = twitter.get_tweet_counts(twitter_users_global)
             print('\tStoring data')
-            predictit.store_pi_df(pi_df, update_ts)
-            twitter.store_tweet_counts(tweet_counts, update_ts)
+            dbt.store_pi_api(pie.api_df, update_ts)
+            dbt.store_tweet_counts(tweet_counts, update_ts)
             print('\tSuccess')
         except Exception as e:
             print(e)
-        time.sleep(60)  # TODO make this dynamic
+        pi_ts = pie.api_df['predictit_ts'].max()
+        next_pi_ts = pi_ts + datetime.timedelta(seconds=60)
+        now = datetime.datetime.now()
+        delay = (next_pi_ts - now).total_seconds()
+        if delay <= 0 or delay > 60:
+            delay = 60
+        else:
+            delay = delay + 60
+        time.sleep(delay)
 
 
 if __name__ == "__main__":
-    init_globals()
     t = Thread(target=run_main, daemon=True)
     t.start()

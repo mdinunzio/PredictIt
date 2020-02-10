@@ -366,27 +366,6 @@ class PiEngine():
 # MAIN #######################################################################
 
 
-def get_twitter_markets(pi_data=None):
-    """
-    Return a DataFrame of tweet markets.
-    """
-    markets = get_markets(pi_data)
-    twitter_markets = markets[markets['market'].str.contains('tweets')]
-    return twitter_markets
-
-
-def get_twitter_users(pi_data=None):
-    """
-    Return a list of Twitter users listed within the PredictIt data.
-    """
-    twitter_markets = get_twitter_markets(pi_data)
-    twitter_users = twitter_markets['market'].map(
-        lambda x: x.split(' ')[0].replace('@', ''))
-    twitter_users = twitter_users.unique().tolist()
-    return twitter_users
-
-
-
 def get_low_risk(threshold=.99, contracts=None, export=False):
     """
     Return a DataFrame of lower-risk contract opportunities.
