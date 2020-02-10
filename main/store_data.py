@@ -38,7 +38,7 @@ def get_twitter_users(api_df):
 
 # MAIN FUNCTIONALITY #########################################################
 
-def run_main():
+def store_api_and_tweets():
     """
     Continuously pull and upload data.
     """
@@ -72,5 +72,5 @@ def run_main():
 
 
 if __name__ == "__main__":
-    t = Thread(target=run_main, daemon=False)
+    t = Thread(target=store_api_and_tweets, daemon=False)
     t.start()
