@@ -34,5 +34,7 @@ def get_twitter_users_db(con=PI_PROD):
     Return a list of twitter users present in the database.
     """
     q = 'SELECT "user" FROM tweetcounts GROUP BY "user"'
-    twitter_users_global = select(q)
-    twitter_users_global = twitter_users_global['user'].tolist()
+    twitter_users = select(q)
+    twitter_users = twitter_users['user'].tolist()
+    return twitter_users
+

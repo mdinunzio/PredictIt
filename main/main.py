@@ -1,40 +1,39 @@
-import pandas as pd
 import predictit
 import twitter
-import authapi
 import datetime
-import sqlalchemy
 import time
+import dbtools as dbt
 from threading import Thread
-import sqlalchemy
+import re
 
 
 # SETUP ######################################################################
 
-# Globals
-twitter_users_global = []
+pie = predictit.PiEngine(authenticate=False)
+twitter_users_global = dbt.get_twitter_users_db()
 
 
-# HELPER FUNCTIONS ##########################################################
+# HELPER FUNCTIONS ###########################################################
 
-def init_globals():
+def get_twitter_markets(api_df):
     """
-    Initialize the global variables used in main functionality.
+    Return a DataFrame of tweet markets.
     """
-    global twitter_users_global
-    q = 'SELECT "user" FROM tweetcounts GROUP BY "user"'
-    engine = sqlalchemy.create_engine(
-    'postgresql+psycopg2://{username:s}:{password:s}'
-    '@{host:s}:{port:.0f}/{database:s}'
-    .format(username=authapi.pgdb.username,
-            password=authapi.pgdb.password,
-            host='localhost',
-            port=5432,
-            database=authapi.pgdb.db_name))
-    conn = engine.connect()
-    res = conn.execute(q)
-    usrs = [x[0] for x in res]
-    twitter_users_global = usrs
+    twitter_markets = api_df[api_df['name_market'].str.contains('tweets')]
+    twitter_markets = twitter_markets['name_market'].unique().tolist()
+    return twitter_markets
+
+
+def get_twitter_users(api_df):
+    """
+    Return a list of Twitter users listed within the PredictIt data.
+    """
+    twitter_markets = get_twitter_markets(api_df)
+    twitter_users = [x.split('@')[1].split(' ')[0]
+                     for x in twitter_markets]
+    twitter_users = list(set(twitter_users))
+    return twitter_users
+
 
 # MAIN FUNCTIONALITY #########################################################
 
@@ -48,8 +47,7 @@ def run_main():
             update_ts = datetime.datetime.now()
             print(update_ts)
             print('\tPulling data')
-            pi_data = predictit.get_pi_data()
-            pi_df = predictit.get_pi_df(pi_data=pi_data)
+            pie.update_api_df()
             twitter_users = predictit.get_twitter_users(pi_data)
             twitter_users_global = list(set(twitter_users +
                                             twitter_users_global))
