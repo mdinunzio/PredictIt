@@ -66,7 +66,7 @@ def store_api_and_tweets():
         if delay <= 0 or delay > 60:
             delay = 60
         else:
-            delay = delay + 1
+            delay = delay + 10
         print(f'\tSleeping {delay:.0f} seconds')
         time.sleep(delay)
 
