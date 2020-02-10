@@ -54,19 +54,19 @@ def run_main():
                 set(twitter_users + twitter_users_global))
             tweet_counts = twitter.get_tweet_counts(twitter_users_global)
             print('\tStoring data')
-            dbt.store_pi_api(pie.api_df, update_ts)
-            dbt.store_tweet_counts(tweet_counts, update_ts)
+            dbt.store_pi_api(pie.api_df, update_ts, con)
+            dbt.store_tweet_counts(tweet_counts, update_ts, con)
             print('\tSuccess')
         except Exception as e:
             print(e)
-        pi_ts = pie.api_df['predictit_ts'].max()
+        pi_ts = pie.api_df['predictit_ts'].max().to_pydatetime()
         next_pi_ts = pi_ts + datetime.timedelta(seconds=60)
         now = datetime.datetime.now()
         delay = (next_pi_ts - now).total_seconds()
         if delay <= 0 or delay > 60:
             delay = 60
         else:
-            delay = delay + 60
+            delay = delay + 1
         time.sleep(delay)
 
 
