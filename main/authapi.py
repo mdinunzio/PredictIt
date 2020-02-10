@@ -96,4 +96,3 @@ _setup_twitter()
 _setup_pgdb_dev()
 _setup_pgdb_prod()
 _setup_predictit()
-
