@@ -226,6 +226,9 @@ class PiEngine():
         rsrc_url = f'{PI_URL}/api/Market/{market_id}'
         response = self.get(rsrc_url)
         market_meta = pd.Series(response.json())
+        market_meta = market_meta.rename(index=to_snake)
+        market_meta = market_meta.rename(
+            index=lambda x: x.replace('__', '_'))
         return market_meta
 
     def update_book(self):
