@@ -23,4 +23,5 @@ df['tweetsPrev'] = df.groupby(['user'])['tweets'].shift(1)
 df['tweetChg'] = df['tweets'] - df['tweetsPrev']
 df['day'] = df['date'].map(lambda x: f'{x:%a}')
 
-rdt = df[df['user']=='realDonaldTrump']
+d = df[df['user']=='realDonaldTrump']
+d = df[df['user']=='AOC']
