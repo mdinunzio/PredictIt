@@ -26,3 +26,6 @@ CREATE TABLE public.PiApi
 
 ALTER TABLE public.PiApi
     OWNER to postgres;
+
+CREATE INDEX  piapi_id_market_idx ON piapi
+(id_market);
