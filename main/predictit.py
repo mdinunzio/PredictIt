@@ -223,9 +223,9 @@ class PiEngine():
         Return a Series of parsed market information including rules
         and other specifics.
         """
-        rsrc_url = f'{PI_URL}/api/Market{market_id}'
+        rsrc_url = f'{PI_URL}/api/Market/{market_id}'
         response = self.get(rsrc_url)
-        market_meta = pd.Series(response)
+        market_meta = pd.Series(response.json())
         return market_meta
 
     def update_book(self):
@@ -314,7 +314,10 @@ class PiEngine():
         """
         Place an order on PredictIt.com.
         Valid trade types are buy_no, buy_yes, sell_no, and sell_yes.
-        You can only sell when you are long shares, and therefore
+        Note that you can only sell when you are long shares.
+        An unfilled order to buy followed by an order to sell
+        (market making) or an order to sell more shares than are held
+        will result in failure to process the order.
         """
         trade_type = trade_type.lower()
         price = float(price)
