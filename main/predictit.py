@@ -229,6 +229,8 @@ class PiEngine():
         market_meta = market_meta.rename(index=to_snake)
         market_meta = market_meta.rename(
             index=lambda x: x.replace('__', '_'))
+        market_meta['date_opened'] = \
+            to_timetype(market_meta['date_opened'])
         return market_meta
 
     def update_book(self):
