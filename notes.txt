@@ -1,9 +1,9 @@
-Prevent Auto Reboot
+Prevent auto reboot
 https://www.laptopmag.com/articles/stop-windows-automatic-reboots
 Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU
 
+Postgres server over lan
 https://help.bluemangolearning.com/m/screensteps-workgroup/l/18259-Configuring-PostgreSQL-to-Accept-Connections-From-Computers-on-Your-Network
-
 https://stackoverflow.com/questions/22080307/access-postgresql-server-from-lan
 https://courses.cs.washington.edu/courses/csep544/11au/resources/postgresql-instructions.html
 https://www.postgresql.org/message-id/4B79CCFE.5040105@hogranch.com
@@ -11,5 +11,9 @@ https://dba.stackexchange.com/questions/100564/cant-connect-to-remote-postgresql
 https://www.blackbaud.com/files/support/infinityinstaller/content/installermaster/cofirewalls.htm
 https://docs.microsoft.com/en-us/previous-versions/sql/sql-server-2008-r2/ms175043(v=sql.105)?redirectedfrom=MSDN
 
+Python requests
 https://realpython.com/python-requests/
 httpbin.org
+
+Postgresql drive migration
+https://radumas.info/blog/tutorial/2016/08/08/Migrating-PostgreSQL-Data-Directory-Windows.html
