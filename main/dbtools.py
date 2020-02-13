@@ -45,6 +45,19 @@ def get_twitter_users(con=PI_PROD):
     return twitter_users
 
 
+def get_market_meta(market_ids, con=PI_PROD):
+    """
+    Return a DataFrame of market metadata for the list of
+    given market ids.
+    """
+    q = """
+    SELECT * FROM pimarketmeta
+    WHERE market_id IN ({:s})
+    """.format(', '.join([str(x) for x in market_ids]))
+    market_meta = select(q, con=con)
+    return market_meta
+
+
 def store_tweet_counts(tweet_counts, update_ts, con=PI_PROD):
     """
     Insert the tweet_counts DataFrame into the tweetcounts database.
@@ -59,3 +72,4 @@ def store_pi_api(api_df, update_ts, con=PI_PROD):
     """
     api_df['update_ts'] = update_ts
     insert(api_df, 'piapi', con=con)
+
