@@ -1,6 +1,7 @@
 import dbtools as dbt
 import datetime
 import matplotlib.pyplot as plt
+import pandas as pd
 
 
 eod_tweets_q = """
@@ -19,32 +20,25 @@ df = dbt.select(eod_tweets_q)
 del(df['update_ts'])
 df = df.sort_values(['date', 'user'])
 df = df.reset_index(drop=True)
+
+today = datetime.date.today()
+min_date = df['date'].min()
+max_date = df['date'].max()
+
+date_range = pd.date_range(min_date, max_date)
+date_range = [x.date() for x in date_range]
+lhs = pd.DataFrame(columns=['date'], data=date_range)
+
+df = pd.merge(lhs, df, on='date', how='left')
+df = df[df['date']!=today]
+
+df = df.sort_values(['user', 'date'])
+df = df.reset_index(drop=True)
+
 df['tweetsPrev'] = df.groupby(['user'])['tweets'].shift(1)
 df['tweetChg'] = df['tweets'] - df['tweetsPrev']
 df['day'] = df['date'].map(lambda x: f'{x:%a}')
+df = df.dropna(subset=['tweetChg'])
 
-d = df[df['user']=='realDonaldTrump']
-d = df[df['user']=='AOC']
-
-rdt_q  = """
-SELECT * FROM tweetcounts
-WHERE "user" = 'realDonaldTrump'
-"""
-
-df = dbt.select(rdt_q, con=dbt.PI_PROD)
-df['prevt'] = df['tweets'].shift(1)
-df = df[df['tweets']!=df['prevt']]
-
-plt.scatter(df['update_ts'], df['tweets'])
-plt.savefig(r'C:\Users\mdinu\Desktop\one.png')
-
-df2 = df
-df2['date'] = df2['update_ts'].map(lambda x: x.to_pydatetime().date())
-
-df2 = df.groupby('date').nth(-1)
-df2 = df2.reset_index()
-df2['days'] = df2.index.tolist()
-
-plt.figure()
-plt.scatter(df2['days'], df2['tweets'])
-plt.savefig(r'C:\Users\mdinu\Desktop\two.png')
+grp = df.groupby(['user', 'day'])
+stats = grp[['tweetChg']].agg(['mean', 'std', 'count'])
